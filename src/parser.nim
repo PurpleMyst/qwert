@@ -1,25 +1,9 @@
 from strformat import fmt
 from strutils import Digits, IdentStartChars, IdentChars
 from parseutils import parseInt
+from value import Value, ValueKind
 
 type
-  ValueKind = enum
-    String
-    Identifier
-    SExpr
-    Number
-
-  Value = object
-    case kind*: ValueKind
-    of String:
-      s: string
-    of Identifier:
-      ident: string
-    of Number:
-      n: int
-    of SExpr:
-      contents: seq[Value]
-
   Parser = ref object
     code: string
     len: int
