@@ -1,6 +1,6 @@
-import strformat
-import strutils
-from parseutils import nil
+from strformat import fmt
+from strutils import Digits, IdentStartChars, IdentChars
+from parseutils import parseInt
 
 type
   ValueKind = enum
@@ -24,6 +24,8 @@ type
     code: string
     len: int
 
+  ParseError = ref object of CatchableError
+
 proc peek(parser: Parser): char = parser.code[0]
 
 proc skip(parser: Parser, n: int) =
@@ -37,13 +39,17 @@ proc value(parser: Parser): Value
 
 proc number(parser: Parser): Value =
   result = Value(kind: Number)
-  let n = parseutils.parseInt(parser.code, result.n)
+  let n = parseInt(parser.code, result.n)
   parser.skip(n)
 
 proc identifier(parser: Parser): Value =
   result = Value(kind: Identifier)
 
-  while parser.peek.isAlphaAscii:
+  let startChar = parser.char
+  assert startChar in IdentStartChars
+  result.ident.add startChar
+
+  while parser.peek in IdentChars:
     result.ident.add parser.char
 
   assert result.ident.len != 0
@@ -79,6 +85,7 @@ proc value(parser: Parser): Value =
       discard parser.char
       return parser.value
     of '"': return parser.string
-    else: return parser.identifier
+    of IdentStartChars: return parser.identifier
+    else: raise ParseError(msg: fmt"Unexpected character {parser.peek}")
 
 proc parse*(code: string): Value = Parser(code: code, len: code.len).sexpr
