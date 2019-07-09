@@ -1,4 +1,5 @@
 import parser
+import compiler
 
 when isMainModule:
-  echo(parser.parse("""(echo "hello, world")"""))
+  echo(compile(parse("""(echo "hello, world")""")))
