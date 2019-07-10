@@ -3,9 +3,15 @@ import compiler
 
 when isMainModule:
   echo(compile(parse("""
-    (set x 2)
-
     (fn main () int
-      (echo x)
+      (if 0
+        (begin
+          (set x "hi")
+          (echo x))
+
+        (begin
+          (set y "hello")
+          (echo "not x")))
+
       (return 0))
   """)))

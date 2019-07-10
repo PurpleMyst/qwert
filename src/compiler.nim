@@ -90,6 +90,15 @@ proc compileEcho(self: Compiler, args: openarray[Value]): string =
     result &= self.compile(arg)
   result &= ')'
 
+proc compileIf(self: Compiler, args: openarray[Value]): string =
+  result &= "if ("
+  result &= self.compile(args[0])
+  result &= ") {\n"
+  result &= self.compile(args[1])
+  result &= ";\n} else {\n"
+  result &= self.compile(args[2])
+  result &= ";\n}"
+
 # Compile a value to an expression
 proc compile(self: Compiler, value: Value): string =
   case value.ty
@@ -120,6 +129,14 @@ proc compile(self: Compiler, value: Value): string =
 
         of "echo":
           result &= self.compileEcho(value.contents[1..high(value.contents)])
+
+        of "if":
+          result &= self.compileIf(value.contents[1..high(value.contents)])
+
+        of "begin":
+          for arg in value.contents[1..high(value.contents)]:
+            result &= self.compile(arg)
+            result &= ';'
 
         else:
           result &= head.ident
