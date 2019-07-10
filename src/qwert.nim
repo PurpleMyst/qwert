@@ -3,10 +3,9 @@ import compiler
 
 when isMainModule:
   echo(compile(parse("""
-    (fn twotimes ((int x)) int
-      (return (* x 2)))
+    (set x 2)
 
     (fn main () int
-      (puts "hello, world")
+      (printf "x = %d\n" x)
       (return 0))
   """)))
