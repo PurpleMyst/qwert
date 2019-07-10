@@ -1,67 +1,85 @@
 from strformat import fmt
-from strutils import repeat
-from value import Value, ValueKind
+import tables
+import value
 
 type
   Compiler = ref object
-    headers: seq[string]
-    code: string
-    depth: Natural
+    variableTypes: Table[string, ValueKind]
+    returnTypes: Table[string, ValueKind]
 
   CompileError = ref object of CatchableError
 
-proc compile(compiler: Compiler, value: Value)
 
-proc compileEcho(compiler: Compiler, args: seq[Value]) =
-  var fmt = ""
+proc compile(self: Compiler, name: Value, args: Value, returnType: Value, body: openarray[Value]): string
+proc compile(self: Compiler, value: Value): string =
+  case value.kind
+    of vkString: return '"' & value.s & '"'
+    of vkIdentifier: return value.ident
+    of vkNumber: return $value.n
+    of vkSExpr:
+      let head = value.contents[0]
 
-  compiler.code &= "printf(\""
+      if head.kind != vkIdentifier:
+        raise CompileError(msg: "Only functions are callable")
 
-  for i, value in args:
-    if i != 0:
-      fmt &= ' '
+      # builtins
+      case head.ident:
+        # (fn name args body ...)
+        of "fn":
+          result &= self.compile(
+            name = value.contents[1],
+            args = value.contents[2],
+            returnType = value.contents[3],
+            body = value.contents[4..high(value.contents)]
+          )
+          return
 
-    case value.kind:
-      of String: fmt &= "%s"
-      of Number: fmt &= "%d"
-      else: raise CompileError(msg: fmt"unsupported echo arg {value.repr}")
+      result &= head.ident
+      result &= '('
 
-  compiler.code &= fmt
-  compiler.code &= "\\n\""
+      for idx, item in value.contents[1..high(value.contents)]:
+        if idx != 0:
+          result &= ", "
 
-  for i, value in args:
-    compiler.code &= ", "
-    compiler.compile(value)
+        result &= self.compile(item)
 
-  compiler.code &= ")"
+      result &= ')'
 
-  compiler.headers &= "stdio.h"
+func identifierToCType(value: Value): string =
+  assert value.kind == vkIdentifier
+  case value.ident
+    of "string": return "const char*"
+    of "int": return "int"
+    else: raise CompileError(msg: fmt"unsupported type {value.repr}")
 
-proc compile(compiler: Compiler, contents: seq[Value]) =
-  if contents[0].kind == Identifier:
-    case contents[0].ident:
-      of "echo": compiler.compileEcho(contents[1..high(contents)])
-      else: raise CompileError(msg: fmt"unsupported function {contents.repr}")
-  else:
-    raise CompileError(msg: fmt"unsupported sexpr {contents.repr}")
+proc compile(self: Compiler, name: Value, args: Value, returnType: Value, body: openarray[Value]): string =
+  assert returnType.kind == vkIdentifier
+  result &= identifierToCType(returnType)
 
-proc compile(compiler: Compiler, value: Value) =
-  compiler.depth += 1
-  case value.kind:
-    of String: compiler.code &= '"' & value.s & '"'
-    of Identifier: compiler.code &= value.ident
-    of Number: compiler.code &= $value.n
-    of SExpr: compiler.compile(value.contents)
-  compiler.depth -= 1
+  result &= ' '
 
-  if compiler.depth == 0:
-    compiler.code &= ';'
+  assert name.kind == vkIdentifier
+  result &= name.ident
 
-proc compile*(value: Value): string =
+  result &= '('
+
+  assert args.kind == vkSExpr
+  for idx, arg in args.contents:
+    assert arg.kind == vkSExpr
+    assert arg.contents[1].kind == vkIdentifier
+
+    result &= identifierToCType(arg.contents[0])
+    result &= ' '
+    result &= arg.contents[1].ident
+
+  result &= ") {\n"
+
+  for value in body:
+    result &= self.compile(value)
+    result &= ';'
+
+  result &= "\n}"
+
+proc compile*(values: openarray[Value]): string =
   var compiler = Compiler()
-  compiler.code &= "int main(void) {\n"
-  compiler.compile(value)
-  compiler.code &= "\n}"
-  for header in compiler.headers:
-    compiler.code = fmt"#include <{header}>{'\n'}" & compiler.code
-  return compiler.code
+  for value in values: result &= compiler.compile(value)

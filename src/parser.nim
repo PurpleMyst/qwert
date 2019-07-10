@@ -1,6 +1,7 @@
 from strformat import fmt
-from strutils import Digits, IdentStartChars, IdentChars
+from strutils import Digits, IdentStartChars, IdentChars, Whitespace, isSpaceAscii
 from parseutils import parseInt
+from sequtils import allIt
 from value import Value, ValueKind
 
 type
@@ -22,12 +23,12 @@ proc char(parser: Parser): char =
 proc value(parser: Parser): Value
 
 proc number(parser: Parser): Value =
-  result = Value(kind: Number)
-  let n = parseInt(parser.code, result.n)
-  parser.skip(n)
+  result = Value(kind: vkNumber)
+  let chars = parseInt(parser.code, result.n)
+  parser.skip(chars)
 
 proc identifier(parser: Parser): Value =
-  result = Value(kind: Identifier)
+  result = Value(kind: vkIdentifier)
 
   let startChar = parser.char
   assert startChar in IdentStartChars
@@ -39,10 +40,10 @@ proc identifier(parser: Parser): Value =
   assert result.ident.len != 0
 
 proc sexpr(parser: Parser): Value =
+  result = Value(kind: vkSExpr)
+
   let lparen = parser.char
   assert lparen == '('
-
-  result = Value(kind: SExpr)
 
   while parser.code[0] != ')':
     result.contents.add parser.value
@@ -51,10 +52,9 @@ proc sexpr(parser: Parser): Value =
   assert rparen == ')'
 
 proc string(parser: Parser): Value =
+  result = Value(kind: vkString)
   let quote = parser.char
   assert quote == '"'
-
-  result = Value(kind: String)
 
   while parser.peek != quote:
     result.s.add parser.char
@@ -65,11 +65,15 @@ proc value(parser: Parser): Value =
   case parser.peek
     of '(': return parser.sexpr
     of Digits: return parser.number
-    of ' ':
+    of Whitespace:
       discard parser.char
       return parser.value
     of '"': return parser.string
     of IdentStartChars: return parser.identifier
     else: raise ParseError(msg: fmt"Unexpected character {parser.peek}")
 
-proc parse*(code: string): Value = Parser(code: code, len: code.len).sexpr
+proc parse*(code: string): seq[Value] =
+  var parser = Parser(code: code, len: code.len)
+
+  while not parser.code.allIt(it.isSpaceAscii):
+    result.add parser.value

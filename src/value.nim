@@ -1,17 +1,17 @@
 type
   ValueKind* = enum
-    String
-    Identifier
-    SExpr
-    Number
+    vkString
+    vkIdentifier
+    vkNumber
+    vkSExpr
 
   Value* = object
     case kind*: ValueKind
-    of String:
+    of vkString:
       s*: string
-    of Identifier:
+    of vkIdentifier:
       ident*: string
-    of Number:
+    of vkNumber:
       n*: int
-    of SExpr:
+    of vkSExpr:
       contents*: seq[Value]
