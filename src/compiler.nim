@@ -4,31 +4,31 @@ import value
 
 type
   Compiler = ref object
-    variableTypes: Table[string, ValueKind]
-    returnTypes: Table[string, ValueKind]
+    variableTypes: Table[string, ValueType]
+    returnTypes: Table[string, ValueType]
 
   CompileError = ref object of CatchableError
 
 # Map a type name to its discriminant equivalent
-func typename(typename: string): ValueKind =
+func typename(typename: string): ValueType =
   case typename
-    of "string": return vkString
-    of "int": return vkNumber
+    of "string": return vtString
+    of "int": return vtNumber
     else: raise CompileError(msg: fmt"unknown typename: {typename}")
 
 # Infer the type of an expression
-func expressionType(self: Compiler, value: Value): ValueKind =
-  case value.kind:
-    of vkIdentifier: return self.variableTypes[value.ident]
-    of vkSExpr: return self.returnTypes[value.contents[0].ident]
-    else: return value.kind
+func expressionType(self: Compiler, value: Value): ValueType =
+  case value.ty:
+    of vtIdentifier: return self.variableTypes[value.ident]
+    of vtSExpr: return self.returnTypes[value.contents[0].ident]
+    else: return value.ty
 
 proc compile(self: Compiler, value: Value): string
 
 # Compile a function definition
 proc compileFunction(self: Compiler, name: Value, args: Value, returnType: Value, body: openarray[Value]): string =
-  assert returnType.kind == vkIdentifier
-  assert name.kind == vkIdentifier
+  assert returnType.ty == vtIdentifier
+  assert name.ty == vtIdentifier
 
   self.returnTypes[name.ident] = returnType.ident.typename
 
@@ -40,12 +40,12 @@ proc compileFunction(self: Compiler, name: Value, args: Value, returnType: Value
 
   result &= '('
 
-  assert args.kind == vkSExpr
+  assert args.ty == vtSExpr
   for idx, arg in args.contents:
-    assert arg.kind == vkSExpr
+    assert arg.ty == vtSExpr
 
-    assert arg.contents[0].kind == vkIdentifier
-    assert arg.contents[1].kind == vkIdentifier
+    assert arg.contents[0].ty == vtIdentifier
+    assert arg.contents[1].ty == vtIdentifier
 
     result &= $self.expressionType(arg.contents[0])
     result &= ' '
@@ -60,7 +60,7 @@ proc compileFunction(self: Compiler, name: Value, args: Value, returnType: Value
   result &= "\n}"
 
 proc compileSet(self: Compiler, lhs: Value, rhs: Value): string =
-  assert lhs.kind == vkIdentifier
+  assert lhs.ty == vtIdentifier
 
   self.variableTypes[lhs.ident] = self.expressionType(rhs)
 
@@ -73,13 +73,13 @@ proc compileSet(self: Compiler, lhs: Value, rhs: Value): string =
 
 # Compile a value to an expression
 proc compile(self: Compiler, value: Value): string =
-  case value.kind
-    of vkString: return '"' & value.s & '"'
-    of vkIdentifier: return value.ident
-    of vkNumber: return $value.n
-    of vkSExpr:
+  case value.ty
+    of vtString: return '"' & value.s & '"'
+    of vtIdentifier: return value.ident
+    of vtNumber: return $value.n
+    of vtSExpr:
       let head = value.contents[0]
-      assert head.kind == vkIdentifier
+      assert head.ty == vtIdentifier
 
       # builtins
       case head.ident:

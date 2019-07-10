@@ -1,27 +1,27 @@
 from strformat import fmt
 
 type
-  ValueKind* = enum
-    vkString
-    vkIdentifier
-    vkNumber
-    vkSExpr
+  ValueType* = enum
+    vtString
+    vtIdentifier
+    vtNumber
+    vtSExpr
 
   Value* = object
-    case kind*: ValueKind
-    of vkString:
+    case ty*: ValueType
+    of vtString:
       s*: string
-    of vkIdentifier:
+    of vtIdentifier:
       ident*: string
-    of vkNumber:
+    of vtNumber:
       n*: int
-    of vkSExpr:
+    of vtSExpr:
       contents*: seq[Value]
 
   IDontKnowError = ref object of CatchableError
 
-func `$`*(kind: ValueKind): string =
-  case kind
-    of vkString: return "const char*"
-    of vkNumber: return "int"
-    else: raise IDontKnowError(msg: fmt"unknown typename for kind {kind.repr}")
+func `$`*(ty: ValueType): string =
+  case ty
+    of vtString: return "const char*"
+    of vtNumber: return "int"
+    else: raise IDontKnowError(msg: fmt"unknown typename for type {ty.repr}")

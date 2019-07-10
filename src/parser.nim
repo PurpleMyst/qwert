@@ -2,7 +2,7 @@ from strformat import fmt
 from strutils import Digits, IdentStartChars, IdentChars, Whitespace, isSpaceAscii
 from parseutils import parseInt
 from sequtils import allIt
-from value import Value, ValueKind
+from value import Value, ValueType
 
 type
   Parser = ref object
@@ -23,12 +23,12 @@ proc char(parser: Parser): char =
 proc value(parser: Parser): Value
 
 proc number(parser: Parser): Value =
-  result = Value(kind: vkNumber)
+  result = Value(ty: vtNumber)
   let chars = parseInt(parser.code, result.n)
   parser.skip(chars)
 
 proc identifier(parser: Parser): Value =
-  result = Value(kind: vkIdentifier)
+  result = Value(ty: vtIdentifier)
 
   let startChar = parser.char
   assert startChar in IdentStartChars
@@ -40,7 +40,7 @@ proc identifier(parser: Parser): Value =
   assert result.ident.len != 0
 
 proc sexpr(parser: Parser): Value =
-  result = Value(kind: vkSExpr)
+  result = Value(ty: vtSExpr)
 
   let lparen = parser.char
   assert lparen == '('
@@ -52,7 +52,7 @@ proc sexpr(parser: Parser): Value =
   assert rparen == ')'
 
 proc string(parser: Parser): Value =
-  result = Value(kind: vkString)
+  result = Value(ty: vtString)
   let quote = parser.char
   assert quote == '"'
 
