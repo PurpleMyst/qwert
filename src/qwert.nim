@@ -6,6 +6,6 @@ when isMainModule:
     (set x 2)
 
     (fn main () int
-      (printf "x = %d\n" x)
+      (echo x)
       (return 0))
   """)))

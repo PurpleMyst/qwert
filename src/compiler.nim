@@ -71,6 +71,25 @@ proc compileSet(self: Compiler, lhs: Value, rhs: Value): string =
   result &= self.compile(rhs)
   result &= ';'
 
+proc compileEcho(self: Compiler, args: openarray[Value]): string =
+  var fmt = ""
+
+  for i, arg in args:
+    if i > 0: fmt &= ' '
+
+    case self.expressionType(arg)
+      of vtString: fmt &= "%s"
+      of vtNumber: fmt &= "%d"
+      else: raise CompileError(msg: fmt"invalid echo arg {arg.repr}")
+
+  result &= "printf(\""
+  result &= fmt
+  result &= '"'
+  for arg in args:
+    result &= ", "
+    result &= self.compile(arg)
+  result &= ')'
+
 # Compile a value to an expression
 proc compile(self: Compiler, value: Value): string =
   case value.ty
@@ -98,6 +117,9 @@ proc compile(self: Compiler, value: Value): string =
             lhs = value.contents[1],
             rhs = value.contents[2],
           )
+
+        of "echo":
+          result &= self.compileEcho(value.contents[1..high(value.contents)])
 
         else:
           result &= head.ident
